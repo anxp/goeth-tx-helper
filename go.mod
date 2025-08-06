@@ -3,7 +3,7 @@ module github.com/anxp/goeth-tx-helper
 go 1.22.3
 
 require (
-	github.com/anxp/array-basics v0.0.0-20241209175133-82adc538f613
+	github.com/anxp/array-basics v0.0.0-20241210183906-546c028e8aa2
 	github.com/ethereum/go-ethereum v1.14.12
 )
 
