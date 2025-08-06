@@ -277,7 +277,7 @@ func (eipHelper *EIP1559TransactionHelper) FilterTransactionLog(txReceipt *types
 func (eipHelper *EIP1559TransactionHelper) ContractFunctionCall(contractAddress *common.Address, contractABI abi.ABI, blockNumber *big.Int, methodName string, args ...interface{}) ([]interface{}, error) {
 	request, err := contractABI.Pack(methodName, args...)
 	if err != nil {
-		return nil, err
+		return nil, WrapExternalError(nil, err.Error()) // original error == nil  because we did not external request, all errors are local!
 	}
 
 	msg := ethereum.CallMsg{
@@ -292,8 +292,8 @@ func (eipHelper *EIP1559TransactionHelper) ContractFunctionCall(contractAddress 
 
 	parsedResponse, err := contractABI.Unpack(methodName, result)
 	if err != nil {
-		// Unpack is not an external call, so we don't use external wrapper for error
-		return nil, fmt.Errorf("failed to parse responce for contract function \"%s\", check contract ABI; error: %s", methodName, err)
+		// Unpack is not an external call, so any error interprets as local!
+		return nil, WrapExternalError(nil, fmt.Sprintf("failed to parse response for contract function \"%s\", check contract ABI; error: %s", methodName, err))
 	}
 
 	return parsedResponse, nil
