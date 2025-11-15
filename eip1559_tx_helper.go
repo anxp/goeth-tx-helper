@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"log"
+	"math/big"
+
 	"github.com/anxp/array-basics"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -11,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"log"
-	"math/big"
 )
 
 /*
@@ -100,9 +101,11 @@ func (eipHelper *EIP1559TransactionHelper) GetGasParameters(from common.Address,
 
 	baseFee := header.BaseFee
 
-	// Doubling the Base Fee when calculating the Max Fee ensures that your transaction will remain marketable for six consecutive 100% full blocks.
-	gasFeeCap := big.NewInt(0)                                                // a.k.a. maxFeePerGas
-	gasFeeCap.Mul(baseFee, big.NewInt(2)).Add(gasFeeCap, eipHelper.gasTipCap) // Calculate the max fee per gas (2*baseFee + gasTipCap)
+	twentyFivePercentFromBaseFee := big.NewInt(0)
+	twentyFivePercentFromBaseFee.Quo(baseFee, big.NewInt(4))
+
+	extendedPricePerGas := big.NewInt(0) // a.k.a. maxFeePerGas (1.25*baseFee + gasTipCap)
+	extendedPricePerGas.Add(baseFee, twentyFivePercentFromBaseFee).Add(extendedPricePerGas, eipHelper.gasTipCap)
 
 	gasLimit, err := estimateGas(eipHelper.ethClient, from, to, value, data)
 
@@ -112,7 +115,7 @@ func (eipHelper *EIP1559TransactionHelper) GetGasParameters(from common.Address,
 
 	return Gas1559Params{
 		GasTipCap: eipHelper.gasTipCap,
-		GasFeeCap: gasFeeCap,
+		GasFeeCap: extendedPricePerGas,
 		Gas:       gasLimit,
 	}, nil
 }

@@ -8,6 +8,8 @@ github.com/VictoriaMetrics/fastcache v1.12.2 h1:N0y9ASrJ0F6h0QaC3o6uJb3NIZ9VKLjC
 github.com/VictoriaMetrics/fastcache v1.12.2/go.mod h1:AmC+Nzz1+3G2eCPapF6UcsnkThDcMsQicp4xDukwJYI=
 github.com/anxp/array-basics v0.0.0-20241209175133-82adc538f613 h1:TWyxxKBRcVZ+05Sl/lSLPVGT2iuIHDqNP4kObyvkihw=
 github.com/anxp/array-basics v0.0.0-20241209175133-82adc538f613/go.mod h1:jsDk5XTZiUu36jZJELuvL5fKT4rrZsRWITPObt/Oe90=
+github.com/anxp/array-basics v0.0.0-20241210183906-546c028e8aa2 h1:Yd7p788t+yjIa8VRxDMYrf6SE4R/KK5lNY1yRtgG3qU=
+github.com/anxp/array-basics v0.0.0-20241210183906-546c028e8aa2/go.mod h1:jsDk5XTZiUu36jZJELuvL5fKT4rrZsRWITPObt/Oe90=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bits-and-blooms/bitset v1.13.0 h1:bAQ9OPNFYbGHV6Nez0tmNI0RiEu7/hxlYJRUA0wFAVE=
