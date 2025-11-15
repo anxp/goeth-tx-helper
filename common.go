@@ -35,7 +35,7 @@ func estimateGas(ethClient *ethclient.Client, from common.Address, to *common.Ad
 
 	// This is fallback for BSC, if amount of gas can't be estimated.
 	if err != nil && err.Error() == "execution reverted: 0x" { // we can't use errors.Is() here because these are different errors.
-		return 1_000_000, nil
+		return 500_000, nil
 	}
 
 	if err != nil {
