@@ -3,7 +3,6 @@ package goeth_tx_helper
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -12,8 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
-
-var execRevertedError = errors.New("execution reverted: 0x")
 
 func GetPublicAddressFromPrivateKey(privateKey *ecdsa.PrivateKey) (common.Address, error) {
 	publicKey := privateKey.Public()
@@ -37,7 +34,7 @@ func estimateGas(ethClient *ethclient.Client, from common.Address, to *common.Ad
 	gasLimit, err = ethClient.EstimateGas(context.Background(), msg)
 
 	// This is fallback for BSC, if amount of gas can't be estimated.
-	if errors.Is(err, execRevertedError) {
+	if err != nil && err.Error() == "execution reverted: 0x" { // we can't use errors.Is() here because these are different errors.
 		return 1_000_000, nil
 	}
 
