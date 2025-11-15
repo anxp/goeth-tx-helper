@@ -42,9 +42,17 @@ type EIP1559TransactionHelper struct {
 }
 
 type Gas1559Params struct {
+	Type int // 0 for legacy, 2 for EIP1559
+
+	// EIP1559 Gas Parameters
 	GasTipCap *big.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap *big.Int // a.k.a. maxFeePerGas
-	Gas       uint64
+
+	// Gas limit for contract, EIP1559 & Legacy!
+	Gas uint64
+
+	// Legacy Gas Parameters
+	GasPrice *big.Int
 }
 
 // CreateEIP1559TxHelper
@@ -87,37 +95,60 @@ func CreateEIP1559TxHelper(rpcUrl string, gasTip int64, emulation bool, receiptM
 func (eipHelper *EIP1559TransactionHelper) GetGasParameters(from common.Address, to *common.Address, value *big.Int, data []byte) (Gas1559Params, error) {
 	if eipHelper.emulation {
 		return Gas1559Params{
+			Type:      2,
 			GasTipCap: big.NewInt(0),
 			GasFeeCap: big.NewInt(0),
 			Gas:       0,
+			GasPrice:  big.NewInt(0),
 		}, nil
 	}
 
 	header, err := eipHelper.ethClient.HeaderByNumber(context.Background(), nil)
-
 	if err != nil {
 		return Gas1559Params{}, WrapExternalError(err, "failed to request last block header")
 	}
 
+	gasLimit, err := estimateGas(eipHelper.ethClient, from, to, value, data)
+	if err != nil {
+		return Gas1559Params{}, err
+	}
+
 	baseFee := header.BaseFee
 
-	twentyFivePercentFromBaseFee := big.NewInt(0)
-	twentyFivePercentFromBaseFee.Quo(baseFee, big.NewInt(4))
+	if baseFee.BitLen() != 0 { // EIP1559
+		twentyFivePercentFromBaseFee := big.NewInt(0)
+		twentyFivePercentFromBaseFee.Quo(baseFee, big.NewInt(4))
 
-	extendedPricePerGas := big.NewInt(0) // a.k.a. maxFeePerGas (1.25*baseFee + gasTipCap)
-	extendedPricePerGas.Add(baseFee, twentyFivePercentFromBaseFee).Add(extendedPricePerGas, eipHelper.gasTipCap)
+		extendedPricePerGas := big.NewInt(0) // a.k.a. maxFeePerGas (1.25*baseFee + gasTipCap)
+		extendedPricePerGas.Add(baseFee, twentyFivePercentFromBaseFee).Add(extendedPricePerGas, eipHelper.gasTipCap)
 
-	gasLimit, err := estimateGas(eipHelper.ethClient, from, to, value, data)
+		return Gas1559Params{
+			Type: 2,
+
+			GasTipCap: eipHelper.gasTipCap,
+			GasFeeCap: extendedPricePerGas,
+			Gas:       gasLimit,
+
+			GasPrice: nil,
+		}, nil
+	}
+
+	legacyGasPrice, err := eipHelper.ethClient.SuggestGasPrice(context.Background())
 
 	if err != nil {
 		return Gas1559Params{}, err
 	}
 
 	return Gas1559Params{
-		GasTipCap: eipHelper.gasTipCap,
-		GasFeeCap: extendedPricePerGas,
+		Type: 0,
+
+		GasTipCap: nil,
+		GasFeeCap: nil,
 		Gas:       gasLimit,
+
+		GasPrice: legacyGasPrice,
 	}, nil
+
 }
 
 func (eipHelper *EIP1559TransactionHelper) GetBaseFee() (*big.Int, error) {
@@ -155,16 +186,31 @@ func (eipHelper *EIP1559TransactionHelper) SendTransaction(
 		return nil, WrapExternalError(err, "failed to get nonce")
 	}
 
-	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   chainID,
-		Nonce:     nonce,
-		GasTipCap: gasParams.GasTipCap,
-		GasFeeCap: gasParams.GasFeeCap,
-		Gas:       gasParams.Gas,
-		To:        to,
-		Value:     value,
-		Data:      data,
-	})
+	var tx *types.Transaction
+
+	if gasParams.Type == 2 {
+		tx = types.NewTx(&types.DynamicFeeTx{
+			ChainID:   chainID,
+			Nonce:     nonce,
+			GasTipCap: gasParams.GasTipCap,
+			GasFeeCap: gasParams.GasFeeCap,
+			Gas:       gasParams.Gas,
+			To:        to,
+			Value:     value,
+			Data:      data,
+		})
+	} else {
+		txLegacy := types.LegacyTx{
+			Nonce:    nonce,
+			GasPrice: gasParams.GasPrice,
+			Gas:      gasParams.Gas,
+			To:       to,
+			Value:    value,
+			Data:     data,
+		}
+
+		tx = types.NewTx(&txLegacy)
+	}
 
 	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), privateKey)
 	if err != nil {
