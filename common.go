@@ -3,13 +3,17 @@ package goeth_tx_helper
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"math/big"
 )
+
+var execRevertedError = errors.New("execution reverted: 0x")
 
 func GetPublicAddressFromPrivateKey(privateKey *ecdsa.PrivateKey) (common.Address, error) {
 	publicKey := privateKey.Public()
@@ -31,6 +35,11 @@ func estimateGas(ethClient *ethclient.Client, from common.Address, to *common.Ad
 	}
 
 	gasLimit, err = ethClient.EstimateGas(context.Background(), msg)
+
+	// This is fallback for BSC, if amount of gas can't be estimated.
+	if errors.Is(err, execRevertedError) {
+		return 1_000_000, nil
+	}
 
 	if err != nil {
 		return 0, WrapExternalError(err, "failed to estimate gas limit for given operation")
