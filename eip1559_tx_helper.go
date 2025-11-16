@@ -140,9 +140,13 @@ func (eipHelper *EIP1559TransactionHelper) GetGasParameters(from common.Address,
 	}
 
 	// Trying to overcome the error from BSC: "transaction underpriced: gas tip cap 50000000, minimum needed 100000000"
-	twentyFivePercentFromLegacyGasPrice := big.NewInt(0)
-	twentyFivePercentFromLegacyGasPrice.Quo(legacyGasPrice, big.NewInt(4))
-	legacyGasPrice.Add(legacyGasPrice, twentyFivePercentFromLegacyGasPrice)
+	if commonPrice := big.NewInt(100_000_000); legacyGasPrice.Cmp(commonPrice) == -1 {
+		legacyGasPrice.Set(commonPrice)
+	} else {
+		twentyFivePercentFromLegacyGasPrice := big.NewInt(0)
+		twentyFivePercentFromLegacyGasPrice.Quo(legacyGasPrice, big.NewInt(4))
+		legacyGasPrice.Add(legacyGasPrice, twentyFivePercentFromLegacyGasPrice)
+	}
 
 	return Gas1559Params{
 		Type: 0,
